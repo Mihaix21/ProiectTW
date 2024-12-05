@@ -26,5 +26,25 @@
       "miroslav@example.com",
       "daniel@example.com"
     ]
+  },
+  {
+    "id": 4,
+    "name": "Bug Tracker Testare2 ",
+    "repositoryUrl": "https://github.com/example/bug-tracker2",
+    "teamMembers": [
+      "mihai@example.com",
+      "cristi@example.com",
+      "daniel@example.com"
+    ]
+  },
+  {
+    "id": 5,
+    "name": "Bug Tracker test ",
+    "repositoryUrl": "https://github.com/example/bug-tracker2",
+    "teamMembers": [
+      "mihai@example.com",
+      "miroslav@example.com",
+      "daniel@example.com"
+    ]
   }
 ]

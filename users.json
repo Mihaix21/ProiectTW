@@ -38,5 +38,10 @@
     "id": 8,
     "email": "miroslav@example.com",
     "password": "$2b$10$uJ2UpUfi/QR753MXPbF55.C9fx7lZaITW6oJ.gbXPNijbRX0lvqha"
+  },
+  {
+    "id": 9,
+    "email": "carpenco@example.com",
+    "password": "$2b$10$sAJ4Ynl2q801UAGO2nR.EePxzxloytxHCStd5angMa9zW2wrTnpS2"
   }
 ]
