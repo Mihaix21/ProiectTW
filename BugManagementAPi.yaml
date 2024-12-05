@@ -1,0 +1,250 @@
+openapi: 3.0.0
+info:
+  title: Bug Management API
+  description: API for managing bugs in software projects
+  version: 1.0.0
+  contact:
+    email: support@bugmanagement.com
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+paths:
+  /auth/login:
+    post:
+      summary: User login
+      description: Allows users to login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: mail@example.com
+                password:
+                  type: string
+                  format: password
+                  example: parola
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT authentication token
+        '401':
+          description: Invalid credentials
+
+  /projects:
+    post:
+      summary: Register a new project
+      description: Allows a project member to register a new software project by providing project details
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Bug Tracking Application
+                repositoryUrl:
+                  type: string
+                  format: uri
+                  example: https://github.com/student/bug-tracker
+                teamMembers:
+                  type: array
+                  items:
+                    type: string
+                    example: member1@example.com
+      responses:
+        '201':
+          description: Project successfully registered
+        '400':
+          description: Invalid project data
+
+  /projects/{projectId}/add-tester:
+    post:
+      summary: Add tester to project
+      description: Allows a student to add themselves as a tester to an existing project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                testerEmail:
+                  type: string
+                  format: email
+                  example: tester@example.com
+      responses:
+        '200':
+          description: Tester successfully added to the project
+        '404':
+          description: Project not found
+
+  /projects/{projectId}/bugs:
+    post:
+      summary: Report a new bug
+      description: Allows a tester to report a new bug in the project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "Bug in registration feature"
+                description:
+                  type: string
+                  example: "The registration form does not work when entering a special character in the password."
+                severity:
+                  type: string
+                  enum: [Low, Medium, High]
+                  example: High
+                priority:
+                  type: string
+                  enum: [Low, Medium, High]
+                  example: Medium
+                commitLink:
+                  type: string
+                  format: uri
+                  example: https://github.com/student/bug-tracker/commit/abc123
+      responses:
+        '201':
+          description: Bug successfully reported
+        '400':
+          description: Invalid bug data
+
+    get:
+      summary: List bugs for a project
+      description: Allows project members to view all bugs related to a specific project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the project
+      responses:
+        '200':
+          description: List of bugs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: bug123
+                    title:
+                      type: string
+                      example: "Bug in login feature"
+                    severity:
+                      type: string
+                      enum: [Low, Medium, High]
+                      example: High
+                    status:
+                      type: string
+                      enum: [Open, In Progress, Resolved]
+                      example: Open
+
+  /projects/{projectId}/bugs/{bugId}/assign:
+    put:
+      summary: Assign a bug to a project member
+      description: Allows a project member to assign themselves to a bug for resolution
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the project
+        - name: bugId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the bug
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                assignee:
+                  type: string
+                  example: member1@example.com
+      responses:
+        '200':
+          description: Bug successfully assigned
+        '404':
+          description: Bug or project not found
+
+  /projects/{projectId}/bugs/{bugId}/resolve:
+    put:
+      summary: Update bug resolution status
+      description: Allows a member to update the resolution status of a bug and add a commit link
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the project
+        - name: bugId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the bug
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [Resolved]
+                  example: Resolved
+                resolutionCommitLink:
+                  type: string
+                  format: uri
+                  example: https://github.com/student/bug-tracker/commit/def456
+      responses:
+        '200':
+          description: Bug status successfully updated
+        '404':
+          description: Bug or project not found
