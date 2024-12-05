@@ -103,80 +103,80 @@ paths:
 
   /projects/{projectId}/bugs:
     post:
-    summary: Report a new bug
-    description: Allows a tester to report a new bug in the project
-    parameters:
-      - name: projectId
-        in: path
-        required: true
-        schema:
-          type: string
-        description: The ID of the project
-    requestBody:
-      required: true
-      content:
-        application/json:
+      summary: Report a new bug
+      description: Allows a tester to report a new bug in the project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
           schema:
-            type: object
-            properties:
-              title:
-                type: string
-                example: "Bug in registration feature"
-              description:
-                type: string
-                example: "The registration form does not work when entering a special character in the password."
-              severity:
-                type: string
-                enum: [Low, Medium, High]
-                example: High
-              priority:
-                type: string
-                enum: [Low, Medium, High]
-                example: Medium
-              commitLink:
-                type: string
-                format: uri
-                example: https://github.com/student/bug-tracker/commit/abc123
-    responses:
-      '201':
-        description: Bug successfully reported
-      '400':
-        description: Invalid bug data
-
-  /projects/{projectId}/bugs:
-    summary: List bugs for a project
-    description: Allows project members to view all bugs related to a specific project
-    parameters:
-      - name: projectId
-        in: path
+            type: string
+          description: The ID of the project
+      requestBody:
         required: true
-        schema:
-          type: string
-        description: The ID of the project
-    responses:
-      '200':
-        description: List of bugs
         content:
           application/json:
             schema:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    example: bug123
-                  title:
-                    type: string
-                    example: "Bug in login feature"
-                  severity:
-                    type: string
-                    enum: [Low, Medium, High]
-                    example: High
-                  status:
-                    type: string
-                    enum: [Open, In Progress, Resolved]
-                    example: Open
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "Bug in registration feature"
+                description:
+                  type: string
+                  example: "The registration form does not work when entering a special character in the password."
+                severity:
+                  type: string
+                  enum: [Low, Medium, High]
+                  example: High
+                priority:
+                  type: string
+                  enum: [Low, Medium, High]
+                  example: Medium
+                commitLink:
+                  type: string
+                  format: uri
+                  example: https://github.com/student/bug-tracker/commit/abc123
+      responses:
+        '201':
+          description: Bug successfully reported
+        '400':
+          description: Invalid bug data
+
+    get:
+      summary: List bugs for a project
+      description: Allows project members to view all bugs related to a specific project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the project
+      responses:
+        '200':
+          description: List of bugs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: bug123
+                    title:
+                      type: string
+                      example: "Bug in login feature"
+                    severity:
+                      type: string
+                      enum: [Low, Medium, High]
+                      example: High
+                    status:
+                      type: string
+                      enum: [Open, In Progress, Resolved]
+                      example: Open
 
   /projects/{projectId}/bugs/{bugId}/assign:
     put:
