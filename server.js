@@ -4,12 +4,12 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
-
 const app = express();
 app.use(express.json());
 
 // Calea către fișierul JSON pentru utilizatori
 const usersFilePath = path.join(__dirname, 'users.json');
+const projectsFilePath = path.join(__dirname, 'projects.json');
 
 // Funcție pentru a citi utilizatorii din fișier
 function readUsers() {
@@ -26,10 +26,42 @@ function writeUsers(users) {
   fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2), 'utf-8');
 }
 
+// Funcție pentru a citi proiectele din fișier
+function readProjects() {
+  if (!fs.existsSync(projectsFilePath)) {
+    return [];
+  }
+  const data = fs.readFileSync(projectsFilePath, 'utf-8');
+  return JSON.parse(data || '[]');
+}
+
+// Funcție pentru a scrie proiectele în fișier
+function writeProjects(projects) {
+  fs.writeFileSync(projectsFilePath, JSON.stringify(projects, null, 2), 'utf-8');
+}
+
 // Ruta principală (testare)
 app.get('/', (req, res) => {
   res.send('WELCOME to BUG MANAGEMENT API!');
 });
+
+// Middleware pentru autentificare
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ message: 'Access denied' });
+  }
+
+  try {
+    const user = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = user; // Adaugă informațiile utilizatorului la request
+    next();
+  } catch (err) {
+    return res.status(403).json({ message: 'Invalid token' });
+  }
+};
+
 
 // Endpoint pentru înregistrare
 app.post('/auth/register', async (req, res) => {
@@ -83,28 +115,61 @@ app.post('/auth/login', async (req, res) => {
   res.status(200).json({ token }); // Returnează token-ul generat
 });
 
+//Endpoint pentru înregistrarea unui proiect
+app.post('/projects', authenticateToken, (req, res) => {
+  const { name, repositoryUrl, teamMembers } = req.body;
 
-// Middleware pentru autentificare
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ message: 'Access denied' });
+  // Validează datele primite
+  if (!name || !repositoryUrl || !Array.isArray(teamMembers)) {
+    return res.status(400).json({ message: 'Invalid project data' });
   }
 
-  try {
-    const user = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = user; // Adaugă informațiile utilizatorului la request
-    next();
-  } catch (err) {
-    return res.status(403).json({ message: 'Invalid token' });
-  }
-};
+  // Citește proiectele existente
+  const projects = readProjects();
+
+  // Creează un proiect nou
+  const newProject = {
+    id: projects.length + 1,
+    name,
+    repositoryUrl,
+    teamMembers
+  };
+
+  // Adaugă proiectul la listă și salvează
+  projects.push(newProject);
+  writeProjects(projects);
+
+  res.status(201).json({ message: 'Project registered successfully', project: newProject });
+});
+
 
 // Rută protejată pentru testare
 app.get('/protected', authenticateToken, (req, res) => {
   res.json({ message: 'Access granted', user: req.user });
 });
+
+// Rută pentru înregistrarea proiectelor
+app.post('/projects', authenticateToken, (req, res) => {
+  const { name, repositoryUrl, teamMembers } = req.body;
+
+  if (!name || !repositoryUrl || !Array.isArray(teamMembers)) {
+    return res.status(400).json({ message: 'Invalid project data' });
+  }
+
+  const projects = readProjects();
+  const newProject = {
+    id: projects.length + 1,
+    name,
+    repositoryUrl,
+    teamMembers,
+  };
+
+  projects.push(newProject);
+  writeProjects(projects);
+
+  res.status(201).json({ message: 'Project registered successfully', project: newProject });
+});
+
 
 // Pornirea serverului
 const PORT = process.env.PORT || 3000;

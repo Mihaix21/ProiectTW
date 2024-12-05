@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "name": "Bug Tracker",
+    "repositoryUrl": "https://github.com/example/bug-tracker",
+    "teamMembers": [
+      "student1@example.com",
+      "student2@example.com"
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Bug Tracker",
+    "repositoryUrl": "https://github.com/example/bug-tracker2",
+    "teamMembers": [
+      "mihai@example.com",
+      "daniel@example.com"
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Bug Tracker Testare ",
+    "repositoryUrl": "https://github.com/example/bug-tracker2",
+    "teamMembers": [
+      "mihai@example.com",
+      "miroslav@example.com",
+      "daniel@example.com"
+    ]
+  }
+]

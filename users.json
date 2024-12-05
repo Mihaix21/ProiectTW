@@ -18,5 +18,25 @@
     "id": 4,
     "email": "student/3/@example.com",
     "password": "$2b$10$gO.ZtF6s9W.5dDpB6V9jr.t9m1epPJk6qvY4y9.M9UoinE/Uve3Gy"
+  },
+  {
+    "id": 5,
+    "email": "student/4/@example.com",
+    "password": "$2b$10$P5s4rrOYMegoBm9pU.OJH.GprTFkVYDYUgWwQ6lUPH.0i8tthxLES"
+  },
+  {
+    "id": 6,
+    "email": "mihai@example.com",
+    "password": "$2b$10$QQtIVsTGjU/cqU6zkWukf.jQMz/ZWcebAXg5t8pOMN2GKrcxmms.e"
+  },
+  {
+    "id": 7,
+    "email": "daniel@example.com",
+    "password": "$2b$10$eIodE7ILrtiR/bo/Q0HWyeOouiPux7CQdX53PBXIVoCyuC4jAaxY6"
+  },
+  {
+    "id": 8,
+    "email": "miroslav@example.com",
+    "password": "$2b$10$uJ2UpUfi/QR753MXPbF55.C9fx7lZaITW6oJ.gbXPNijbRX0lvqha"
   }
 ]
