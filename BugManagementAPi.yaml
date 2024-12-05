@@ -4,7 +4,7 @@ info:
   description: API for managing bugs in software projects
   version: 1.0.0
   contact:
-    email: support@bugmanagement.com
+    email: chiroiumihai22@stud.ase.ro
 
 servers:
   - url: http://localhost:3000
@@ -61,12 +61,12 @@ paths:
                 repositoryUrl:
                   type: string
                   format: uri
-                  example: https://github.com/student/bug-tracker
+                  example: https://github.com/cineva/repository
                 teamMembers:
                   type: array
                   items:
                     type: string
-                    example: member1@example.com
+                    example: cineva@stud.ase.ro
       responses:
         '201':
           description: Project successfully registered
@@ -94,7 +94,7 @@ paths:
                 testerEmail:
                   type: string
                   format: email
-                  example: tester@example.com
+                  example: chiroiumihai22@stud.ase.ro
       responses:
         '200':
           description: Tester successfully added to the project
@@ -145,7 +145,7 @@ paths:
 
     get:
       summary: List bugs for a project
-      description: Allows project members to view all bugs related to a specific project
+      description: Allo s project members to view all bugs related to a specific project
       parameters:
         - name: projectId
           in: path
