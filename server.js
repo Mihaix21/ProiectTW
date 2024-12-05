@@ -1,120 +1,160 @@
-const express = require('express');
+const express = require('express'); 
 const swaggerUi = require('swagger-ui-express');
 const YAML = require('yamljs');
+const mongoose = require('mongoose'); // Importă Mongoose pentru baza de date
 const app = express();
 const port = 3000;
 
-app.get('/', (req, res) => {
-    res.send('Welcome to the Bug Management API');
-});
+// Conectarea la MongoDB
+mongoose.connect('mongodb://localhost:27017/bugManagement')
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((err) => {
+    console.error('Could not connect to MongoDB...', err);
+    process.exit(1);
+  });
+
+// Middleware pentru parsarea JSON
 app.use(express.json());
 
+// Încarcă fișierul OpenAPI (YAML)
 const swaggerDocument = YAML.load('./BugManagementAPI.yaml');
 
+// Integrează Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-app.post('/auth/login', (req, res) => {
-    const { email, password } = req.body;
-    console.log("Login endpoint accessed"); 
+// Definirea schemelor pentru baza de date cu Mongoose
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true }
+});
 
-    if (email === "student@example.com" && password === "mysecurepassword") {
-        res.status(200).json({ token: "your-jwt-token-here" });
+const projectSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  repositoryUrl: { type: String, required: true },
+  teamMembers: [{ type: String, required: true }],
+});
+
+const bugSchema = new mongoose.Schema({
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
+  title: { type: String, required: true },
+  description: String,
+  severity: { type: String, enum: ['Low', 'Medium', 'High'], required: true },
+  priority: { type: String, enum: ['Low', 'Medium', 'High'], required: true },
+  status: { type: String, enum: ['Open', 'In Progress', 'Resolved'], default: 'Open' },
+  commitLink: String,
+  assignee: String,
+});
+
+// Crearea modelelor pentru utilizatori, proiecte și bug-uri
+const User = mongoose.model('User', userSchema);
+const Project = mongoose.model('Project', projectSchema);
+const Bug = mongoose.model('Bug', bugSchema);
+
+// Endpoint pentru înregistrarea unui utilizator
+app.post('/auth/register', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required" });
+  }
+
+  try {
+    const user = new User({ email, password });
+    await user.save();
+    res.status(201).json({ message: "User successfully registered" });
+  } catch (err) {
+    if (err.code === 11000) {
+      res.status(409).json({ message: "User already exists" });
     } else {
-        res.status(401).json({ message: "Invalid credentials" });
+      res.status(500).json({ message: "Server error", error: err.message });
     }
+  }
 });
 
-app.post('/projects', (req, res) => {
-    const { name, repositoryUrl, teamMembers } = req.body;
-    if (name && repositoryUrl && teamMembers) {
-        const projectId = Math.random().toString(36).substr(2, 9); // generate a projectid
-        res.status(201).json({ projectId, message: "Project successfully registered" });
-        console.log("Project added successfully");
+// Endpoint pentru login
+app.post('/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required" });
+  }
+
+  try {
+    const user = await User.findOne({ email, password });
+    if (user) {
+      res.status(200).json({ token: "your-jwt-token-here" }); // Simplificat pentru exemplu
     } else {
-        res.status(400).json({ message: "Invalid project data" });
+      res.status(401).json({ message: "Invalid credentials" });
     }
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
 });
 
-//endpoint to obtain a list of projects
-app.get('/projects', (req, res) => {
-    
-    res.status(200).json([{ projectId: '123', name: 'Bug Tracking Application' }]);
+// Endpoint pentru crearea unui proiect
+app.post('/projects', async (req, res) => {
+  const { name, repositoryUrl, teamMembers } = req.body;
+  if (!name || !repositoryUrl || !teamMembers) {
+    return res.status(400).json({ message: "Invalid project data" });
+  }
+
+  try {
+    const project = new Project({ name, repositoryUrl, teamMembers });
+    await project.save();
+    res.status(201).json({ message: "Project successfully registered", projectId: project._id });
+    console.log("Project added successfully");
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
 });
 
-// Endpoint for add-tester
-app.post('/projects/:projectId/add-tester', (req, res) => {
-    const { projectId } = req.params;
-    const { testerEmail } = req.body;
-
-    if (!projectId) {
-        return res.status(400).json({ message: 'Project ID is required' });
-    }
-    if (!testerEmail) {
-        return res.status(400).json({ message: 'Tester email is required' });
-    }
-
-    console.log(`Tester ${testerEmail} added to project ${projectId}`);
-    res.status(200).json({ message: `Tester ${testerEmail} successfully added to project ${projectId}` });
+// Endpoint pentru obținerea listei de proiecte
+app.get('/projects', async (req, res) => {
+  try {
+    const projects = await Project.find();
+    res.status(200).json(projects);
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
 });
 
-// Endpoint to report a bug
-app.post('/projects/:projectId/bugs', (req, res) => {
-    const { projectId } = req.params;
-    const { title, description, severity, priority, commitLink } = req.body;
+// Endpoint pentru raportarea unui bug la un proiect
+app.post('/projects/:projectId/bugs', async (req, res) => {
+  const { projectId } = req.params;
+  const { title, description, severity, priority, commitLink } = req.body;
 
-    if (!projectId || !title || !description || !severity || !priority) {
-        return res.status(400).json({ message: 'Invalid bug data' });
+  if (!title || !severity || !priority) {
+    return res.status(400).json({ message: "Invalid bug data" });
+  }
+
+  try {
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
     }
 
-    const bugId = Math.random().toString(36).substr(2, 9); // generats a random id for a bug
-    console.log(`Bug ${title} reported in project ${projectId}`);
-    res.status(201).json({ bugId, message: `Bug successfully reported in project ${projectId}` });
+    const bug = new Bug({ projectId, title, description, severity, priority, commitLink });
+    await bug.save();
+    res.status(201).json({ message: "Bug successfully reported", bugId: bug._id });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
 });
 
-app.get('/projects/:projectId/bugs', (req, res) => {
-    const { projectId } = req.params;
+// Endpoint pentru a obține bug-urile unui proiect
+app.get('/projects/:projectId/bugs', async (req, res) => {
+  const { projectId } = req.params;
 
-  
-    const bugs = [
-        { bugId: 'bug1', title: 'Login Issue', severity: 'High', status: 'Open' },
-        { bugId: 'bug2', title: 'Registration form not submitting', severity: 'Medium', status: 'In Progress' }
-    ];
-
-    console.log(`Listing bugs for project ${projectId}`);
+  try {
+    const bugs = await Bug.find({ projectId });
     res.status(200).json(bugs);
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
 });
 
-
-app.put('/projects/:projectId/bugs/:bugId/assign', (req, res) => {
-    const { projectId, bugId } = req.params;
-    const { assignee } = req.body;
-
-    if (!projectId || !bugId || !assignee) {
-        return res.status(400).json({ message: 'Invalid assignment data' });
-    }
-
-    console.log(`Bug ${bugId} in project ${projectId} assigned to ${assignee}`);
-    res.status(200).json({ message: `Bug ${bugId} successfully assigned to ${assignee} in project ${projectId}` });
-});
-
-app.put('/projects/:projectId/bugs/:bugId/resolve', (req, res) => {
-    const { projectId, bugId } = req.params;
-    const { status, resolutionCommitLink } = req.body;
-
-    if (!projectId || !bugId || !status) {
-        return res.status(400).json({ message: 'Invalid resolution data' });
-    }
-
-    if (status !== 'Resolved') {
-        return res.status(400).json({ message: 'Invalid status value, should be "Resolved"' });
-    }
-
-    console.log(`Bug ${bugId} in project ${projectId} resolved`);
-    res.status(200).json({ message: `Bug ${bugId} successfully resolved in project ${projectId}`, resolutionCommitLink });
-});
-
-//startup sv
+// Pornirea serverului
 app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-    console.log(`Swagger UI is available at http://localhost:${port}/api-docs`);
+  console.log(`Server is running on http://localhost:${port}`);
+  console.log(`Swagger UI is available at http://localhost:${port}/api-docs`);
 });

@@ -11,6 +11,33 @@ servers:
     description: Local development server
 
 paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      description: Allows a new user to register with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: student@example.com
+                password:
+                  type: string
+                  format: password
+                  example: mysecurepassword
+      responses:
+        '201':
+          description: User successfully registered
+        '400':
+          description: Invalid user data
+        '409':
+          description: User already exists
+
   /auth/login:
     post:
       summary: User login
@@ -145,7 +172,7 @@ paths:
 
     get:
       summary: List bugs for a project
-      description: Allo s project members to view all bugs related to a specific project
+      description: Allows project members to view all bugs related to a specific project
       parameters:
         - name: projectId
           in: path
