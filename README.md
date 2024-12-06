@@ -24,6 +24,3 @@ Ca MP îmi pot aloca rezolvarea unui bug. Un singur MP poate să aibă alocată 
 
 Ca MP după rezolvarea unui bug pot adăuga un status al rezolvării cu un link la commit-ul prin care s-a rezolvat.
 Aplicația are și un sistem de permisiuni. Un MP poate adăuga și modifica un proiect, poate actualiza status-ul unui bug. Un TST poate adăuga un bug.
-
-
-# P.S. : DOAR Mihai Chiroiu Si Ciorici Miroslav Au Lucrat La Acest Proiect!
