@@ -6,9 +6,8 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const port = 3000;
 
-require('dotenv').config(); // Pentru a încărca variabilele de mediu din fișierul .env
+require('dotenv').config(); 
 
-// Conectarea la baza de date MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('Connected to MongoDB Atlas'))
   .catch((err) => {
@@ -19,11 +18,10 @@ mongoose.connect(process.env.MONGO_URI)
 const jwtSecret = 'MIROSLAV';
 app.use(express.json());
 
-// Configurare Swagger pentru documentație API
+
 const swaggerDocument = YAML.load('./BugManagementAPI.yaml');
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-// Definirea schemelor pentru baza de date
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
@@ -56,12 +54,12 @@ const User = mongoose.model('User', userSchema);
 const Project = mongoose.model('Project', projectSchema);
 const Bug = mongoose.model('Bug', bugSchema);
 
-// Ruta de bază
+
 app.get('/', (req, res) => {
   res.send('Welcome to Bug Management API! Access /api-docs for documentation.');
 });
 
-// Înregistrare utilizator nou
+
 app.post('/auth/register', async (req, res) => {
   const { email, password, role } = req.body;
 
@@ -82,7 +80,7 @@ app.post('/auth/register', async (req, res) => {
   }
 });
 
-// Autentificare utilizator
+
 app.post('/auth/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -103,7 +101,7 @@ app.post('/auth/login', async (req, res) => {
   }
 });
 
-// Verificare autentificare și autorizare pentru rute protejate
+
 const verifyRole = (requiredRole) => {
   return (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -119,7 +117,7 @@ const verifyRole = (requiredRole) => {
         return res.status(403).json({ message: "Access denied. You do not have the required role." });
       }
 
-      req.user = decoded; // Salvează utilizatorul decodat în cerere pentru a-l folosi mai târziu
+      req.user = decoded; 
       next();
     } catch (err) {
       return res.status(401).json({ message: "Authentication failed" });
@@ -127,7 +125,7 @@ const verifyRole = (requiredRole) => {
   };
 };
 
-// Creare proiect nou (doar pentru utilizatori cu rol de "Member")
+
 app.post('/projects', verifyRole('Member'), async (req, res) => {
   const { name, repositoryUrl, teamMembers } = req.body;
   if (!name || !repositoryUrl || !teamMembers) {
@@ -143,7 +141,7 @@ app.post('/projects', verifyRole('Member'), async (req, res) => {
   }
 });
 
-// Obținerea listei de proiecte (disponibil pentru toți utilizatorii autentificați)
+
 app.get('/projects', verifyRole(), async (req, res) => {
   try {
     const projects = await Project.find();
@@ -153,7 +151,7 @@ app.get('/projects', verifyRole(), async (req, res) => {
   }
 });
 
-// Ștergerea unui proiect (doar pentru utilizatori cu rol de "Member")
+
 app.delete('/projects/:projectId', verifyRole('Member'), async (req, res) => {
   const { projectId } = req.params;
   console.log(`Attempting to delete project with ID: ${projectId}`);
@@ -171,7 +169,7 @@ app.delete('/projects/:projectId', verifyRole('Member'), async (req, res) => {
   }
 });
 
-// Raportarea unui bug (doar pentru utilizatori cu rol de "Tester")
+
 app.post('/projects/:projectId/bugs', verifyRole('Tester'), async (req, res) => {
   const { projectId } = req.params;
   const { title, description, severity, priority, commitLink } = req.body;
@@ -189,7 +187,7 @@ app.post('/projects/:projectId/bugs', verifyRole('Tester'), async (req, res) => 
   }
 });
 
-// Alocarea unui bug (doar pentru utilizatori cu rol de "Member")
+
 app.put('/projects/:projectId/bugs/:bugId/assign', verifyRole('Member'), async (req, res) => {
   const { projectId, bugId } = req.params;
   const { assignee } = req.body;
@@ -209,7 +207,7 @@ app.put('/projects/:projectId/bugs/:bugId/assign', verifyRole('Member'), async (
   }
 });
 
-// Pornirea serverului
+
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
   console.log(`Swagger UI is available at http://localhost:${port}/api-docs`);
