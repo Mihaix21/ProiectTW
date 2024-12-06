@@ -1,35 +1,42 @@
-const express = require('express'); 
+const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const YAML = require('yamljs');
-const mongoose = require('mongoose'); 
+const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 const app = express();
 const port = 3000;
+
 
 mongoose.connect('mongodb://localhost:27017/bugManagement')
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => {
-    console.error('Could not connect to MongoDB...', err);
+    console.error('Could not connect to MongoDB', err);
     process.exit(1);
   });
 
-
+const jwtSecret = 'MIROSLAV';
 app.use(express.json());
 
+
 const swaggerDocument = YAML.load('./BugManagementAPI.yaml');
-
-
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true }
+  password: { type: String, required: true },
+  role: { type: String, enum: ['Member', 'Tester'], required: true }
 });
 
 const projectSchema = new mongoose.Schema({
   name: { type: String, required: true },
   repositoryUrl: { type: String, required: true },
-  teamMembers: [{ type: String, required: true }],
+  teamMembers: [
+    {
+      email: { type: String, required: true },
+      role: { type: String, enum: ['Member', 'Tester'], required: true }
+    }
+  ],
 });
 
 const bugSchema = new mongoose.Schema({
@@ -49,15 +56,20 @@ const Project = mongoose.model('Project', projectSchema);
 const Bug = mongoose.model('Bug', bugSchema);
 
 
-app.post('/auth/register', async (req, res) => {
-  const { email, password } = req.body;
+app.get('/', (req, res) => {
+  res.send('Welcome to Bug Management API! Access /api-docs for documentation.');
+});
 
-  if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
+
+app.post('/auth/register', async (req, res) => {
+  const { email, password, role } = req.body;
+
+  if (!email || !password || !role) {
+    return res.status(400).json({ message: "Email, password, and role are required" });
   }
 
   try {
-    const user = new User({ email, password });
+    const user = new User({ email, password, role });
     await user.save();
     res.status(201).json({ message: "User successfully registered" });
   } catch (err) {
@@ -80,7 +92,8 @@ app.post('/auth/login', async (req, res) => {
   try {
     const user = await User.findOne({ email, password });
     if (user) {
-      res.status(200).json({ token: "your-jwt-token-here" });
+      const token = jwt.sign({ id: user._id, role: user.role }, jwtSecret, { expiresIn: '24h' });
+      res.status(200).json({ token, role: user.role });
     } else {
       res.status(401).json({ message: "Invalid credentials" });
     }
@@ -90,7 +103,31 @@ app.post('/auth/login', async (req, res) => {
 });
 
 
-app.post('/projects', async (req, res) => {
+const verifyRole = (requiredRole) => {
+  return (req, res, next) => {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return res.status(401).json({ message: "Authorization header missing" });
+    }
+
+    const token = authHeader.split(' ')[1];
+    try {
+      const decoded = jwt.verify(token, jwtSecret);
+      if (requiredRole && decoded.role !== requiredRole) {
+        return res.status(403).json({ message: "Access denied. You do not have the required role." });
+      }
+
+      req.user = decoded;
+      next();
+    } catch (err) {
+      return res.status(401).json({ message: "Authentication failed" });
+    }
+  };
+};
+
+
+app.post('/projects', verifyRole('Member'), async (req, res) => {
   const { name, repositoryUrl, teamMembers } = req.body;
   if (!name || !repositoryUrl || !teamMembers) {
     return res.status(400).json({ message: "Invalid project data" });
@@ -100,41 +137,42 @@ app.post('/projects', async (req, res) => {
     const project = new Project({ name, repositoryUrl, teamMembers });
     await project.save();
     res.status(201).json({ message: "Project successfully registered", projectId: project._id });
-    console.log("Project added successfully");
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
-app.get('/projects', async (req, res) => {
-    try {
-      const projects = await Project.find();
-      res.status(200).json(projects);
-    } catch (err) {
-      res.status(500).json({ message: "Server error", error: err.message });
-    }
-  });
 
-app.delete('/projects/:projectId', async (req, res) => {
-    const { projectId } = req.params;
-    console.log(`Attempting to delete project with ID: ${projectId}`);
+app.get('/projects', verifyRole(), async (req, res) => {
+  try {
+    const projects = await Project.find();
+    res.status(200).json(projects);
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+
+app.delete('/projects/:projectId', verifyRole('Member'), async (req, res) => {
+  const { projectId } = req.params;
+  console.log(`Attempting to delete project with ID: ${projectId}`);
   
-    try {
-      const project = await Project.findByIdAndDelete(projectId);
-      if (!project) {
-        console.log("Project not found");
-        return res.status(404).json({ message: "Project not found" });
-      }
-      res.status(200).json({ message: "Project successfully deleted" });
-    } catch (err) {
-      console.error("Error occurred:", err);
-      res.status(500).json({ message: "Server error", error: err.message });
+  try {
+    const project = await Project.findByIdAndDelete(projectId);
+    if (!project) {
+      console.log("Project not found");
+      return res.status(404).json({ message: "Project not found" });
     }
-  });
-  
+    res.status(200).json({ message: "Project successfully deleted" });
+  } catch (err) {
+    console.error("Error occurred:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
 
 
-app.post('/projects/:projectId/bugs', async (req, res) => {
+
+app.post('/projects/:projectId/bugs', verifyRole('Tester'), async (req, res) => {
   const { projectId } = req.params;
   const { title, description, severity, priority, commitLink } = req.body;
 
@@ -143,11 +181,6 @@ app.post('/projects/:projectId/bugs', async (req, res) => {
   }
 
   try {
-    const project = await Project.findById(projectId);
-    if (!project) {
-      return res.status(404).json({ message: "Project not found" });
-    }
-
     const bug = new Bug({ projectId, title, description, severity, priority, commitLink });
     await bug.save();
     res.status(201).json({ message: "Bug successfully reported", bugId: bug._id });
@@ -156,8 +189,7 @@ app.post('/projects/:projectId/bugs', async (req, res) => {
   }
 });
 
-
-app.put('/projects/:projectId/bugs/:bugId/assign', async (req, res) => {
+app.put('/projects/:projectId/bugs/:bugId/assign', verifyRole('Member'), async (req, res) => {
   const { projectId, bugId } = req.params;
   const { assignee } = req.body;
 
@@ -166,11 +198,7 @@ app.put('/projects/:projectId/bugs/:bugId/assign', async (req, res) => {
   }
 
   try {
-    const bug = await Bug.findOneAndUpdate(
-      { _id: bugId, projectId },
-      { assignee },
-      { new: true }
-    );
+    const bug = await Bug.findOneAndUpdate({ _id: bugId, projectId }, { assignee }, { new: true });
     if (!bug) {
       return res.status(404).json({ message: "Bug or project not found" });
     }
@@ -180,46 +208,7 @@ app.put('/projects/:projectId/bugs/:bugId/assign', async (req, res) => {
   }
 });
 
-
-app.put('/projects/:projectId/bugs/:bugId/resolve', async (req, res) => {
-  const { projectId, bugId } = req.params;
-  const { status, resolutionCommitLink } = req.body;
-
-  if (!status || status !== 'Resolved') {
-    return res.status(400).json({ message: "Status must be 'Resolved'" });
-  }
-
-  try {
-    const bug = await Bug.findOneAndUpdate(
-      { _id: bugId, projectId },
-      { status, commitLink: resolutionCommitLink },
-      { new: true }
-    );
-    if (!bug) {
-      return res.status(404).json({ message: "Bug or project not found" });
-    }
-    res.status(200).json({ message: "Bug successfully resolved", bug });
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-});
-
-
-app.delete('/projects/:projectId/bugs/:bugId', async (req, res) => {
-  const { projectId, bugId } = req.params;
-
-  try {
-    const bug = await Bug.findOneAndDelete({ _id: bugId, projectId });
-    if (!bug) {
-      return res.status(404).json({ message: "Bug or project not found" });
-    }
-    res.status(200).json({ message: "Bug successfully deleted" });
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-});
-
-
+// Pornirea serverului
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
   console.log(`Swagger UI is available at http://localhost:${port}/api-docs`);

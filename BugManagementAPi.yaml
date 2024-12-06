@@ -3,12 +3,22 @@ info:
   title: Bug Management API
   description: API for managing bugs in software projects
   version: 1.0.0
-  contact:
+  contact: 
     email: chiroiumihai22@stud.ase.ro
 
 servers:
   - url: http://localhost:3000
     description: Local development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []
 
 paths:
   /auth/register:
@@ -25,11 +35,15 @@ paths:
                 email:
                   type: string
                   format: email
-                  example: student@example.com
+                  example: 
                 password:
                   type: string
                   format: password
-                  example: mysecurepassword
+                  example: 
+                role :
+                  type: string
+                  format : role
+                  example : Member / Tester
       responses:
         '201':
           description: User successfully registered
@@ -52,11 +66,11 @@ paths:
                 email:
                   type: string
                   format: email
-                  example: student@example.com
+                  example: student@stud.ase.ro
                 password:
                   type: string
                   format: password
-                  example: mysecurepassword
+                  example: password
       responses:
         '200':
           description: Successful login
@@ -75,6 +89,8 @@ paths:
     post:
       summary: Register a new project
       description: Allows a project member to register a new software project by providing project details
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -88,12 +104,20 @@ paths:
                 repositoryUrl:
                   type: string
                   format: uri
-                  example: https://github.com/cineva/repository
+                  example: https://github.com/Mihaix21/ProiectTW
                 teamMembers:
                   type: array
                   items:
-                    type: string
-                    example: cineva@stud.ase.ro
+                    type: object
+                    properties:
+                      email:
+                        type: string
+                        format: email
+                        example: cineva@stud.ase.ro
+                      role:
+                        type: string
+                        enum: ["Member", "Tester"]
+                        example: Member
       responses:
         '201':
           description: Project successfully registered
@@ -103,6 +127,8 @@ paths:
     get:
       summary: Retrieve a list of all projects
       description: Allows users to retrieve all registered software projects.
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: A list of projects
@@ -122,12 +148,19 @@ paths:
                     repositoryUrl:
                       type: string
                       format: uri
-                      example: "https://github.com/cineva/repository"
+                      example: "https://github.com/Mihaix21/ProiectTW"
                     teamMembers:
                       type: array
                       items:
-                        type: string
-                        example: cineva@stud.ase.ro
+                        type: object
+                        properties:
+                          email:
+                            type: string
+                            example: student@stud.ase.ro
+                          role:
+                            type: string
+                            enum: ["Member", "Tester"]
+                            example: Member
         '500':
           description: Server error
           content:
@@ -146,6 +179,8 @@ paths:
     delete:
       summary: Delete a project
       description: Allows a user to delete an existing project by ID
+      security:
+        - bearerAuth: []
       parameters:
         - name: projectId
           in: path
@@ -163,6 +198,8 @@ paths:
     post:
       summary: Report a new bug
       description: Allows a tester to report a new bug in the project
+      security:
+        - bearerAuth: []
       parameters:
         - name: projectId
           in: path
@@ -204,6 +241,8 @@ paths:
     get:
       summary: List bugs for a project
       description: Allows project members to view all bugs related to a specific project
+      security:
+        - bearerAuth: []
       parameters:
         - name: projectId
           in: path
@@ -240,6 +279,8 @@ paths:
     delete:
       summary: Delete a bug
       description: Allows a user to delete a specific bug by ID
+      security:
+        - bearerAuth: []
       parameters:
         - name: projectId
           in: path
@@ -263,6 +304,8 @@ paths:
     put:
       summary: Assign a bug to a project member
       description: Allows a project member to assign themselves to a bug for resolution
+      security:
+        - bearerAuth: []
       parameters:
         - name: projectId
           in: path
@@ -305,7 +348,7 @@ paths:
                         example: bug123
                       assignee:
                         type: string
-                        example: "member1@example.com"
+                        example: "member1@stud.ase.ro"
         '404':
           description: Bug or project not found
 
@@ -313,6 +356,8 @@ paths:
     put:
       summary: Update bug resolution status
       description: Allows a member to update the resolution status of a bug and add a commit link
+      security:
+        - bearerAuth: []
       parameters:
         - name: projectId
           in: path
