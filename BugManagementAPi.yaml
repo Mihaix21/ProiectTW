@@ -10,6 +10,16 @@ servers:
   - url: http://localhost:3000
     description: Local development server
 
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []
+
 paths:
   /auth/login:
     post:
@@ -47,7 +57,10 @@ paths:
   /projects:
     post:
       summary: Register a new project
-      description: Allows a project member to register a new software project by providing project details
+      tags:
+        - Projects
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -57,26 +70,57 @@ paths:
               properties:
                 name:
                   type: string
-                  example: Bug Tracking Application
+                  example: "Bug Tracking Application"
                 repositoryUrl:
                   type: string
-                  format: uri
-                  example: https://github.com/student/bug-tracker
+                  example: "https://github.com/student/bug-tracker"
                 teamMembers:
                   type: array
                   items:
                     type: string
-                    example: member1@example.com
+                  example: ["member1@example.com", "member2@example.com"]
       responses:
         '201':
           description: Project successfully registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Project registered successfully
+                  project:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: "Bug Tracking Application"
+                      repositoryUrl:
+                        type: string
+                        example: "https://github.com/student/bug-tracker"
+                      teamMembers:
+                        type: array
+                        items:
+                          type: string
+                        example: ["member1@example.com", "member2@example.com"]
+                      createdBy:
+                        type: string
+                        example: "student@example.com"
         '400':
           description: Invalid project data
+        '401':
+          description: Unauthorized access
 
   /projects/{projectId}/add-tester:
     post:
       summary: Add tester to project
       description: Allows a student to add themselves as a tester to an existing project
+      security:
+        - bearerAuth: []
       parameters:
         - name: projectId
           in: path
@@ -105,6 +149,8 @@ paths:
     post:
       summary: Report a new bug
       description: Allows a tester to report a new bug in the project
+      security:
+        - bearerAuth: []
       parameters:
         - name: projectId
           in: path
@@ -146,6 +192,8 @@ paths:
     get:
       summary: List bugs for a project
       description: Allows project members to view all bugs related to a specific project
+      security:
+        - bearerAuth: []
       parameters:
         - name: projectId
           in: path
@@ -177,74 +225,3 @@ paths:
                       type: string
                       enum: [Open, In Progress, Resolved]
                       example: Open
-
-  /projects/{projectId}/bugs/{bugId}/assign:
-    put:
-      summary: Assign a bug to a project member
-      description: Allows a project member to assign themselves to a bug for resolution
-      parameters:
-        - name: projectId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The ID of the project
-        - name: bugId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The ID of the bug
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                assignee:
-                  type: string
-                  example: member1@example.com
-      responses:
-        '200':
-          description: Bug successfully assigned
-        '404':
-          description: Bug or project not found
-
-  /projects/{projectId}/bugs/{bugId}/resolve:
-    put:
-      summary: Update bug resolution status
-      description: Allows a member to update the resolution status of a bug and add a commit link
-      parameters:
-        - name: projectId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The ID of the project
-        - name: bugId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The ID of the bug
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                status:
-                  type: string
-                  enum: [Resolved]
-                  example: Resolved
-                resolutionCommitLink:
-                  type: string
-                  format: uri
-                  example: https://github.com/student/bug-tracker/commit/def456
-      responses:
-        '200':
-          description: Bug status successfully updated
-        '404':
-          description: Bug or project not found

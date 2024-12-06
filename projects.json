@@ -46,5 +46,57 @@
       "miroslav@example.com",
       "daniel@example.com"
     ]
+  },
+  {
+    "id": 6,
+    "name": "Bug Tracker test2 ",
+    "repositoryUrl": "https://github.com/example/bug-tracker2",
+    "teamMembers": [
+      "mihai@example.com",
+      "miroslav@example.com",
+      "daniel@example.com"
+    ]
+  },
+  {
+    "id": 7,
+    "name": "Bug Tracker test3 ",
+    "repositoryUrl": "https://github.com/example/bug-tracker2",
+    "teamMembers": [
+      "mihai@example.com",
+      "miroslav@example.com",
+      "daniel@example.com"
+    ],
+    "createdBy": "mihai@example.com"
+  },
+  {
+    "id": 8,
+    "name": "Bug Tracker test4 ",
+    "repositoryUrl": "https://github.com/example/bug-tracker2",
+    "teamMembers": [
+      "mihai@example.com",
+      "miroslav@example.com",
+      "daniel@example.com"
+    ],
+    "createdBy": "mihai@example.com"
+  },
+  {
+    "id": 9,
+    "name": "Bug Tracking Application5",
+    "repositoryUrl": "https://github.com/student/bug-tracker",
+    "teamMembers": [
+      "member1@example.com",
+      "member2@example.com"
+    ],
+    "createdBy": "mihai@example.com"
+  },
+  {
+    "id": 10,
+    "name": "Bug Tracking Application8",
+    "repositoryUrl": "https://github.com/student/bug-tracker",
+    "teamMembers": [
+      "mihai@example.com",
+      "daniel@example.com"
+    ],
+    "createdBy": "miroslav@example.com"
   }
 ]

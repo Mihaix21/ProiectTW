@@ -5,45 +5,14 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const swaggerUi = require('swagger-ui-express');
-const swaggerJsDoc = require('swagger-jsdoc');
+const yaml = require('yamljs');
 
 const app = express();
 app.use(express.json());
 
-// Configurare Swagger
-const swaggerOptions = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'Bug Management API',
-      version: '1.0.0',
-      description: 'API for managing bugs and projects',
-    },
-    servers: [
-      {
-        url: 'http://localhost:3000',
-      },
-    ],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-        },
-      },
-    },
-    security: [
-      {
-        bearerAuth: [],
-      },
-    ],
-  },
-  apis: ['./server.js'], // Asigură-te că documentația Swagger este adăugată corect
-};
-
-const swaggerDocs = swaggerJsDoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+// Încarcă fișierul YAML pentru Swagger
+const swaggerDocument = yaml.load('./BugManagementAPI.yaml');
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Căile către fișierele JSON
 const usersFilePath = path.join(__dirname, 'users.json');
@@ -56,7 +25,6 @@ function readUsers() {
   return JSON.parse(data);
 }
 
-// Funcție pentru a scrie utilizatorii în fișier
 function writeUsers(users) {
   fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2), 'utf-8');
 }
@@ -87,37 +55,11 @@ const authenticateToken = (req, res, next) => {
   }
 };
 
-// Ruta principală
+// Rute
 app.get('/', (req, res) => {
   res.send('WELCOME to BUG MANAGEMENT API!');
 });
 
-// Endpoint pentru înregistrare utilizatori
-/**
- * @swagger
- * /auth/register:
- *   post:
- *     summary: Register a new user
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *                 example: "student@example.com"
- *               password:
- *                 type: string
- *                 example: "password123"
- *     responses:
- *       201:
- *         description: User registered successfully
- *       400:
- *         description: Email already in use
- */
 app.post('/auth/register', async (req, res) => {
   const { email, password } = req.body;
 
@@ -134,39 +76,6 @@ app.post('/auth/register', async (req, res) => {
   res.status(201).json({ message: 'User registered successfully' });
 });
 
-// Endpoint pentru autentificare
-/**
- * @swagger
- * /auth/login:
- *   post:
- *     summary: Login user
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *                 example: "student@example.com"
- *               password:
- *                 type: string
- *                 example: "password123"
- *     responses:
- *       200:
- *         description: User logged in successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 token:
- *                   type: string
- *       401:
- *         description: Invalid credentials
- */
 app.post('/auth/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -180,109 +89,58 @@ app.post('/auth/login', async (req, res) => {
   res.status(200).json({ token });
 });
 
-// Endpoint pentru înregistrarea proiectelor
-/**
- * @swagger
- * /projects:
- *   post:
- *     summary: Register a new project
- *     tags: [Projects]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *                 example: "Bug Tracker"
- *               repositoryUrl:
- *                 type: string
- *                 example: "https://github.com/example/bug-tracker"
- *               teamMembers:
- *                 type: array
- *                 items:
- *                   type: string
- *                 example: ["member1@example.com", "member2@example.com"]
- *     responses:
- *       201:
- *         description: Project registered successfully
- *       400:
- *         description: Invalid project data
- *       401:
- *         description: Unauthorized access
- */
+// Endpoint pentru adăugarea unui proiect
 app.post('/projects', authenticateToken, (req, res) => {
   const { name, repositoryUrl, teamMembers } = req.body;
 
+  // Verifică dacă utilizatorul este autentificat și există în baza de date
+  const users = readUsers();
+  const loggedInUser = users.find(user => user.id === req.user.id);
+
+  if (!loggedInUser) {
+    return res.status(403).json({ message: 'User not authorized to add a project' });
+  }
+
+  // Validează datele proiectului
   if (!name || !repositoryUrl || !Array.isArray(teamMembers)) {
     return res.status(400).json({ message: 'Invalid project data' });
   }
 
+  // Creează proiectul
   const projects = readProjects();
   const newProject = {
     id: projects.length + 1,
     name,
     repositoryUrl,
     teamMembers,
+    createdBy: loggedInUser.email // Adaugă email-ul utilizatorului care a creat proiectul
   };
+
+  // Adaugă proiectul la baza de date
   projects.push(newProject);
   writeProjects(projects);
 
   res.status(201).json({ message: 'Project registered successfully', project: newProject });
 });
 
-// Endpoint pentru obținerea tuturor proiectelor
-/**
- * @swagger
- * /projects:
- *   get:
- *     summary: Get all projects
- *     tags: [Projects]
- *     responses:
- *       200:
- *         description: Returns all projects
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: integer
- *                   name:
- *                     type: string
- *                   repositoryUrl:
- *                     type: string
- *                   teamMembers:
- *                     type: array
- *                     items:
- *                       type: string
- */
 
-app.get('/users', (req, res) => {
+app.get('/projects', authenticateToken, (req, res) => {
   try {
-    const users = readUsers();
-
-    // Ascunde parola din răspuns
-    const usersWithoutPasswords = users.map(user => ({
-      id: user.id,
-      email: user.email,
-    }));
-
-    res.status(200).json(usersWithoutPasswords);
+    const projects = readProjects();
+    res.status(200).json(projects);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
-app.get('/projects', (req, res) => {
+
+app.get('/users', authenticateToken, (req, res) => {
   try {
-    const projects = readProjects();
-    res.status(200).json(projects);
+    const users = readUsers();
+    const usersWithoutPasswords = users.map(user => ({
+      id: user.id,
+      email: user.email,
+    }));
+    res.status(200).json(usersWithoutPasswords);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
