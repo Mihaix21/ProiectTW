@@ -1,0 +1,410 @@
+openapi: 3.0.0
+info:
+  title: Bug Management API
+  description: API for managing bugs in software projects
+  version: 1.0.0
+  contact: 
+    email: chiroiumihai22@stud.ase.ro
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      description: Allows a new user to register with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: 
+                password:
+                  type: string
+                  format: password
+                  example: 
+                role :
+                  type: string
+                  format : role
+                  example : Member / Tester
+      responses:
+        '201':
+          description: User successfully registered
+        '400':
+          description: Invalid user data
+        '409':
+          description: User already exists
+
+  /auth/login:
+    post:
+      summary: User login
+      description: Allows users to login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: student@stud.ase.ro
+                password:
+                  type: string
+                  format: password
+                  example: password
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT authentication token
+        '401':
+          description: Invalid credentials
+
+  /projects:
+    post:
+      summary: Register a new project
+      description: Allows a project member to register a new software project by providing project details
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Bug Tracking Application
+                repositoryUrl:
+                  type: string
+                  format: uri
+                  example: https://github.com/Mihaix21/ProiectTW
+                teamMembers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      email:
+                        type: string
+                        format: email
+                        example: cineva@stud.ase.ro
+                      role:
+                        type: string
+                        enum: ["Member", "Tester"]
+                        example: Member
+      responses:
+        '201':
+          description: Project successfully registered
+        '400':
+          description: Invalid project data
+
+    get:
+      summary: Retrieve a list of all projects
+      description: Allows users to retrieve all registered software projects.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A list of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                      example: "60d9f441c25e4c3f68a71234"
+                    name:
+                      type: string
+                      example: "Bug Tracking Application"
+                    repositoryUrl:
+                      type: string
+                      format: uri
+                      example: "https://github.com/Mihaix21/ProiectTW"
+                    teamMembers:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          email:
+                            type: string
+                            example: student@stud.ase.ro
+                          role:
+                            type: string
+                            enum: ["Member", "Tester"]
+                            example: Member
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Server error"
+                  error:
+                    type: string
+                    example: "Detailed error message"
+
+  /projects/{projectId}:
+    delete:
+      summary: Delete a project
+      description: Allows a user to delete an existing project by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the project to delete
+      responses:
+        '200':
+          description: Project successfully deleted
+        '404':
+          description: Project not found
+
+  /projects/{projectId}/bugs:
+    post:
+      summary: Report a new bug
+      description: Allows a tester to report a new bug in the project
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "Bug in registration feature"
+                description:
+                  type: string
+                  example: "The registration form does not work when entering a special character in the password."
+                severity:
+                  type: string
+                  enum: [Low, Medium, High]
+                  example: High
+                priority:
+                  type: string
+                  enum: [Low, Medium, High]
+                  example: Medium
+                commitLink:
+                  type: string
+                  format: uri
+                  example: https://github.com/student/bug-tracker/commit/abc123
+      responses:
+        '201':
+          description: Bug successfully reported
+        '400':
+          description: Invalid bug data
+
+    get:
+      summary: List bugs for a project
+      description: Allows project members to view all bugs related to a specific project
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the project
+      responses:
+        '200':
+          description: List of bugs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: bug123
+                    title:
+                      type: string
+                      example: "Bug in login feature"
+                    severity:
+                      type: string
+                      enum: [Low, Medium, High]
+                      example: High
+                    status:
+                      type: string
+                      enum: [Open, In Progress, Resolved]
+                      example: Open
+
+  /projects/{projectId}/bugs/{bugId}:
+    delete:
+      summary: Delete a bug
+      description: Allows a user to delete a specific bug by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the project
+        - name: bugId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the bug to delete
+      responses:
+        '200':
+          description: Bug successfully deleted
+        '404':
+          description: Bug or project not found
+
+  /projects/{projectId}/bugs/{bugId}/assign:
+    put:
+      summary: Assign a bug to a project member
+      description: Allows a project member to assign themselves to a bug for resolution
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the project
+        - name: bugId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the bug
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                assignee:
+                  type: string
+                  example: "member1@example.com"
+      responses:
+        '200':
+          description: Bug successfully assigned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Bug successfully assigned"
+                  bug:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: bug123
+                      assignee:
+                        type: string
+                        example: "member1@stud.ase.ro"
+        '404':
+          description: Bug or project not found
+
+  /projects/{projectId}/bugs/{bugId}/resolve:
+    put:
+      summary: Update bug resolution status
+      description: Allows a member to update the resolution status of a bug and add a commit link
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the project
+        - name: bugId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the bug
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [Resolved]
+                  example: "Resolved"
+                resolutionCommitLink:
+                  type: string
+                  format: uri
+                  example: "https://github.com/student/bug-tracker/commit/def456"
+      responses:
+        '200':
+          description: Bug status successfully updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Bug status successfully updated"
+                  bug:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: bug123
+                      status:
+                        type: string
+                        example: "Resolved"
+        '404':
+          description: Bug or project not found
